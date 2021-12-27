@@ -512,3 +512,4 @@ async def on_ready():
 load_dotenv()
 TOKEN = os.environ.get("TOKEN")
 bot.run(TOKEN)
+print('Ready')
