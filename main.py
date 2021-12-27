@@ -31,7 +31,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 		'audioformat'       : 'mp3',
 		'outtmpl'           : '%(extractor)s-%(id)s-%(title)s.%(ext)s',
 		'restrictfilenames' : True,
-		'noplaylist'        : True,
+		'yesplaylist'       : True,
 		'nocheckcertificate': True,
 		'ignoreerrors'      : False,
 		'logtostderr'       : False,
@@ -287,17 +287,6 @@ class Music(commands.Cog):
 	async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
 		await ctx.send('An error occurred: {}'.format(str(error)))
 
-	@commands.command(name='join', invoke_without_subcommand=True)
-	async def _join(self, ctx: commands.Context):
-		"""Joins a voice channel."""
-
-		destination = ctx.author.voice.channel
-		if ctx.voice_state.voice:
-			await ctx.voice_state.voice.move_to(destination)
-			return
-
-		ctx.voice_state.voice = await destination.connect()
-
 	@commands.command(name='summon')
 	@commands.has_permissions(manage_guild=True)
 	async def _summon(self, ctx: commands.Context, *, channel: discord.VoiceChannel = None):
@@ -446,7 +435,7 @@ class Music(commands.Cog):
 
 	@commands.command(name='clear')
 	async def _clear(self, ctx: commands.Context):
-		"""Clears whole queue."""
+		"""Removes all items from the queue"""
 
 		if len(ctx.voice_state.songs) == 0:
 			return await ctx.send('Empty queue.')
@@ -477,7 +466,7 @@ class Music(commands.Cog):
         """
 
 		if not ctx.voice_state.voice:
-			await ctx.invoke(self._join)
+			await ctx.invoke(self._summon)
 
 		async with ctx.typing():
 			try:
@@ -490,7 +479,36 @@ class Music(commands.Cog):
 				await ctx.voice_state.songs.put(song)
 				await ctx.send('Enqueued {}'.format(str(source)))
 
-	@_join.before_invoke
+	@commands.command(name='help')
+	async def _help(self, ctx: commands.Context):
+		"""Invoke help."""
+		return await ctx.send('`music.summon [channel]` - Summons the bot to a voice channel. If no channel was '
+		                      'specified, it joins your channel. \n'
+		                      '`music.leave` -  Clears the queue and leaves the voice channel. \n'
+		                      '`volume <0:100>` - Sets the volume of the player. \n'
+		                      '`music.play <title|link>` -  Plays a song. If there are songs in the queue, this will '
+		                      'be queued until the other songs finished playing. This command automatically searches '
+		                      'from various sites if no URL is provided. A list of these sites can be found here: '
+		                      'https://rg3.github.io/youtube-dl/supportedsites.html \n'
+		                      '**Attention!** If the URL refers to a video and a playlist, bot will download playlist\n'
+		                      '`music.pause` - Pauses the currently playing song. \n'
+		                      '`music.resume` - Resumes a currently paused song. \n'
+		                      '`music.stop` - Stops playing song and clears the queue. \n'
+		                      '`music.skip` Vote to skip a song. The requester can automatically skip. 3 skip votes '
+		                      'are needed for the song to be skipped. \n'
+		                      "`music.queue` - Shows the player's queue.\n"
+		                      '`music.shuffle` - Shuffles the queue.\n'
+		                      '`music.remove <index>` Removes a song from the queue at a given index. \n'
+		                      '`music.clear` - Removes all items from the queue \n'
+		                      '`music.loop` - Loops the currently playing song. Invoke this command again to unloop '
+		                      'the song. \n'
+		                      '`music.now` - Displays the currently playing song.\n'
+		                      '`music.help` - Displays help, as you can see.\n'
+		                      '<> = required information, [] = optional information, | = or. Do not include <> [] or | '
+		                      'in your command input. '
+		                      )
+
+	@_summon.before_invoke
 	@_play.before_invoke
 	async def ensure_voice_state(self, ctx: commands.Context):
 		if not ctx.author.voice or not ctx.author.voice.channel:
@@ -502,12 +520,14 @@ class Music(commands.Cog):
 
 
 bot = commands.Bot('music.', description='There is another.')
+bot.remove_command('help')
 bot.add_cog(Music(bot))
 
 
 @bot.event
 async def on_ready():
 	print('Logged in as:\n{0.user.name}\n{0.user.id}'.format(bot))
+
 
 load_dotenv()
 TOKEN = os.environ.get("TOKEN")
