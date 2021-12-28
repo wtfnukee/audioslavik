@@ -168,8 +168,8 @@ class Song:
 
 def get_lyrics(title):
 	try:
-		search = genius.search(title)['hits'][0]['result']['id']
-		return (genius.lyrics(song_id=search))[:-29]
+		search = genius.search_all(title)['sections'][0]['hits'][0]['result']['id']
+		return genius.lyrics(song_id=search)[:-29]
 	except GeniusError:
 		return None
 
@@ -502,7 +502,28 @@ class Music(commands.Cog):
 	@commands.command(name='lyrics')
 	async def _lyrics(self, ctx: commands.Context, *, title: str):
 		"""Displays lyrics of the currently playing song."""
-		await ctx.send(get_lyrics(title) or get_lyrics(ctx.voice_state.current.get_title()))
+		if not get_lyrics(title):
+			await ctx.send(get_lyrics(title))
+		else:
+			await ctx.send('Nothing found')
+
+	@commands.command(name='playlist')
+	async def _playlist(self, ctx: commands.Context, *, playlist: str):
+		playlist_dict = await YTDLSource.ytdl.extract_info(playlist, download=False)
+
+		for video in playlist_dict["entries"]:
+			if not video:
+				continue
+
+			try:
+				source = await YTDLSource.create_source(ctx, video['webpage_url'], loop=self.bot.loop)
+			except YTDLError as e:
+				await ctx.send('An error occurred while processing this request: {}'.format(str(e)))
+			else:
+				song = Song(source)
+
+				await ctx.voice_state.songs.put(song)
+		await ctx.send('Playlist waits you in queue')
 
 	@commands.command(name='help')
 	async def _help(self, ctx: commands.Context):
@@ -528,7 +549,8 @@ class Music(commands.Cog):
 		                      '`music.loop` - Loops the currently playing song. Invoke this command again to unloop '
 		                      'the song. \n'
 		                      '`music.now` - Displays the currently playing song.\n'
-		                      '`music.lyrics ` - Displays lyrics of the currently playing song.\n'
+		                      '`music.playlist <link>` - Adds YouTube playlist to queue.\n'
+		                      '`music.lyrics ` - Displays lyrics of the currently playing song (experimental).\n'
 		                      '`music.help` - Displays help, as you can see.\n'
 		                      '<> = required information, [] = optional information, | = or. Do not include <> [] or | '
 		                      'in your command input. '
