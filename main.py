@@ -9,11 +9,16 @@ import random
 
 import discord
 import youtube_dl
+import lyricsgenius
 from async_timeout import timeout
 from discord.ext import commands
 
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
+
+# Setup Genius
+load_dotenv()
+genius = lyricsgenius.Genius(skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
 
 class VoiceError(Exception):
@@ -21,6 +26,10 @@ class VoiceError(Exception):
 
 
 class YTDLError(Exception):
+	pass
+
+
+class GeniusError(Exception):
 	pass
 
 
@@ -58,8 +67,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 		self.uploader = data.get('uploader')
 		self.uploader_url = data.get('uploader_url')
-		date = data.get('upload_date')
-		self.upload_date = date[6:8] + '.' + date[4:6] + '.' + date[0:4]
+		self.date = data.get('upload_date')
+		self.upload_date = self.date[6:8] + '.' + self.date[4:6] + '.' + self.date[0:4]
 		self.title = data.get('title')
 		self.thumbnail = data.get('thumbnail')
 		self.description = data.get('description')
@@ -152,6 +161,17 @@ class Song:
 		         .set_thumbnail(url=self.source.thumbnail))
 
 		return embed
+
+	def get_title(self):
+		return self.source.title
+
+
+def get_lyrics(title):
+	try:
+		search = genius.search(title)['hits'][0]['result']['id']
+		return (genius.lyrics(song_id=search))[:-29]
+	except GeniusError:
+		return None
 
 
 class SongQueue(asyncio.Queue):
@@ -479,6 +499,11 @@ class Music(commands.Cog):
 				await ctx.voice_state.songs.put(song)
 				await ctx.send('Enqueued {}'.format(str(source)))
 
+	@commands.command(name='lyrics')
+	async def _lyrics(self, ctx: commands.Context, *, title: str):
+		"""Displays lyrics of the currently playing song."""
+		await ctx.send(get_lyrics(title) or get_lyrics(ctx.voice_state.current.get_title()))
+
 	@commands.command(name='help')
 	async def _help(self, ctx: commands.Context):
 		"""Invoke help."""
@@ -503,6 +528,7 @@ class Music(commands.Cog):
 		                      '`music.loop` - Loops the currently playing song. Invoke this command again to unloop '
 		                      'the song. \n'
 		                      '`music.now` - Displays the currently playing song.\n'
+		                      '`music.lyrics ` - Displays lyrics of the currently playing song.\n'
 		                      '`music.help` - Displays help, as you can see.\n'
 		                      '<> = required information, [] = optional information, | = or. Do not include <> [] or | '
 		                      'in your command input. '
@@ -529,7 +555,5 @@ async def on_ready():
 	print('Logged in as:\n{0.user.name}\n{0.user.id}'.format(bot))
 
 
-load_dotenv()
 TOKEN = os.environ.get("TOKEN")
 bot.run(TOKEN)
-print('Ready!')
