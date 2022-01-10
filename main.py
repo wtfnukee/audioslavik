@@ -13,6 +13,8 @@ import lyricsgenius
 from async_timeout import timeout
 from discord.ext import commands
 
+import logging
+
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -302,6 +304,7 @@ class Music(commands.Cog):
 		ctx.voice_state = self.get_voice_state(ctx)
 
 	async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+		logging.critical('An error occurred: {}'.format(str(error)))
 		await ctx.send('An error occurred: {}'.format(str(error)))
 
 	@commands.command(name='summon')
@@ -524,7 +527,7 @@ class Music(commands.Cog):
 		                      '`music.loop` - Loops the currently playing song. Invoke this command again to unloop '
 		                      'the song. \n'
 		                      '`music.now` - Displays the currently playing song.\n'
-		                      #'`music.lyrics ` - Displays lyrics of the currently playing song (experimental).\n'
+		                      # '`music.lyrics ` - Displays lyrics of the currently playing song (experimental).\n'
 		                      '`music.help` - Displays help, as you can see.\n'
 		                      '<> = required information, [] = optional information, | = or. Do not include <> [] or | '
 		                      'in your command input. \n'
@@ -549,7 +552,7 @@ bot.add_cog(Music(bot))
 
 @bot.event
 async def on_ready():
-	print('Logged in as:\n{0.user.name}\n{0.user.id}'.format(bot))
+	logging.critical('Logged in as:\n{0.user.name}\n{0.user.id}'.format(bot))
 
 
 TOKEN = os.environ.get("TOKEN")
