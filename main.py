@@ -509,7 +509,8 @@ class Music(commands.Cog):
 
 	@commands.command(name='playlist')
 	async def _playlist(self, ctx: commands.Context, *, playlist: str):
-		playlist_dict = await YTDLSource.ytdl.extract_info(playlist, download=False)
+		await ctx.send('Proceeding...')
+		playlist_dict = YTDLSource.ytdl.extract_info(playlist, download=False)
 
 		for video in playlist_dict["entries"]:
 			if not video:
