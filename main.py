@@ -209,7 +209,6 @@ class VoiceState:
 
 		self._loop = False
 		self._volume = 0.5
-		self.skip_votes = set()
 
 		self.audio_player = bot.loop.create_task(self.audio_player_task())
 
@@ -265,8 +264,6 @@ class VoiceState:
 		self.next.set()
 
 	def skip(self):
-		self.skip_votes.clear()
-
 		if self.is_playing:
 			self.voice.stop()
 
@@ -308,7 +305,6 @@ class Music(commands.Cog):
 		await ctx.send('An error occurred: {}'.format(str(error)))
 
 	@commands.command(name='summon')
-	@commands.has_permissions(manage_guild=True)
 	async def _summon(self, ctx: commands.Context, *, channel: discord.VoiceChannel = None):
 		"""Summons the bot to a voice channel.
         If no channel was specified, it joins your channel.
@@ -325,7 +321,6 @@ class Music(commands.Cog):
 		ctx.voice_state.voice = await destination.connect()
 
 	@commands.command(name='leave', aliases=['disconnect'])
-	@commands.has_permissions(manage_guild=True)
 	async def _leave(self, ctx: commands.Context):
 		"""Clears the queue and leaves the voice channel."""
 
@@ -355,7 +350,6 @@ class Music(commands.Cog):
 		await ctx.send(embed=ctx.voice_state.current.create_embed())
 
 	@commands.command(name='pause')
-	@commands.has_permissions(manage_guild=True)
 	async def _pause(self, ctx: commands.Context):
 		"""Pauses the currently playing song."""
 
@@ -364,7 +358,6 @@ class Music(commands.Cog):
 			await ctx.message.add_reaction('⏯')
 
 	@commands.command(name='resume')
-	@commands.has_permissions(manage_guild=True)
 	async def _resume(self, ctx: commands.Context):
 		"""Resumes a currently paused song."""
 
@@ -373,7 +366,6 @@ class Music(commands.Cog):
 			await ctx.message.add_reaction('⏯')
 
 	@commands.command(name='stop')
-	@commands.has_permissions(manage_guild=True)
 	async def _stop(self, ctx: commands.Context):
 		"""Stops playing song and clears the queue."""
 
@@ -392,23 +384,7 @@ class Music(commands.Cog):
 		if not ctx.voice_state.is_playing:
 			return await ctx.send('Not playing any music right now...')
 
-		voter = ctx.message.author
-		if voter == ctx.voice_state.current.requester:
-			await ctx.message.add_reaction('⏭')
-			ctx.voice_state.skip()
-
-		elif voter.id not in ctx.voice_state.skip_votes:
-			ctx.voice_state.skip_votes.add(voter.id)
-			total_votes = len(ctx.voice_state.skip_votes)
-
-			if total_votes >= 3:
-				await ctx.message.add_reaction('⏭')
-				ctx.voice_state.skip()
-			else:
-				await ctx.send('Skip vote added, currently at **{}/3**'.format(total_votes))
-
-		else:
-			await ctx.send('You have already voted to skip this song.')
+		ctx.voice_state.skip()
 
 	@commands.command(name='queue')
 	async def _queue(self, ctx: commands.Context, *, page: int = 1):
@@ -532,29 +508,27 @@ class Music(commands.Cog):
 		return await ctx.send('`music.summon [channel]` - Summons the bot to a voice channel. If no channel was '
 		                      'specified, it joins your channel. \n'
 		                      '`music.leave` -  Clears the queue and leaves the voice channel. \n'
-		                      '`volume <0:100>` - Sets the volume of the player. \n'
 		                      '`music.play <title|link>` -  Plays a song. If there are songs in the queue, this will '
 		                      'be queued until the other songs finished playing. This command automatically searches '
 		                      'from various sites if no URL is provided. A list of these sites can be found here: '
 		                      'https://rg3.github.io/youtube-dl/supportedsites.html \n'
-		                      '**Attention!** If the URL refers to a video and a playlist, bot will download playlist\n'
+		                      '`music.playlist <link>` - Adds YouTube playlist to queue.\n'
 		                      '`music.pause` - Pauses the currently playing song. \n'
 		                      '`music.resume` - Resumes a currently paused song. \n'
 		                      '`music.stop` - Stops playing song and clears the queue. \n'
-		                      '`music.skip` Vote to skip a song. The requester can automatically skip. 3 skip votes '
-		                      'are needed for the song to be skipped. \n'
-		                      "`music.queue` - Shows the player's queue.\n"
-		                      '`music.shuffle` - Shuffles the queue.\n'
-		                      '`music.remove <index>` Removes a song from the queue at a given index. \n'
 		                      '`music.clear` - Removes all items from the queue \n'
+		                      "`music.queue` - Shows the songs queue.\n"
+		                      '`music.skip` Skip a song.\n'
+		                      '`music.remove <index>` Removes a song from the queue at a given index. \n'
+		                      '`music.shuffle` - Shuffles the queue.\n'
 		                      '`music.loop` - Loops the currently playing song. Invoke this command again to unloop '
 		                      'the song. \n'
 		                      '`music.now` - Displays the currently playing song.\n'
-		                      '`music.playlist <link>` - Adds YouTube playlist to queue.\n'
-		                      '`music.lyrics ` - Displays lyrics of the currently playing song (experimental).\n'
+		                      #'`music.lyrics ` - Displays lyrics of the currently playing song (experimental).\n'
 		                      '`music.help` - Displays help, as you can see.\n'
 		                      '<> = required information, [] = optional information, | = or. Do not include <> [] or | '
-		                      'in your command input. '
+		                      'in your command input. \n'
+		                      'Contact developer at foldl#3990'
 		                      )
 
 	@_summon.before_invoke
